@@ -65,4 +65,23 @@ Include a link to the GitHub repository in the project documentation.
 ├── View Cart
 ├── Empty Cart
 
+***
+carts save:
+POST http://localhost:5000/carts
+Body:
+{
+    "customer_id": 2,
+    "product_ids": [1,2,6]
+}
+
+update:
+PUT http://localhost:5000/carts/<order_id:int>
+{
+    "customer_id": 2,
+    "product_ids": [1,2,6]
+}
+customer can change the product_id
+
+
+
 
