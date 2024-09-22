@@ -1,0 +1,568 @@
+swagger: "2.0"
+info:
+  title: "Ecommerce API"
+  description: "API for managing customers, products, and orders"
+  version: "1.0.0"
+host: "127.0.0.1:5000"
+schemes:
+  - "http"
+consumes:
+  - "application/json"
+produces:
+  - "application/json"
+
+securityDefinitions:
+  bearerAuth:
+    type: apiKey
+    name: Authorization
+    in: header
+
+# Paths
+paths:
+  /customers/login:
+    post:
+      tags:
+        - Customer
+      summary: "Login endpoint (generates a token)"
+      description: "Endpoint for user authentication and token generation."
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "Credentials for login (email and password)"
+          required: true
+          schema:
+            $ref: "#/definitions/LoginPayload"
+      responses:
+        200:
+          description: "Login successful"
+          schema:
+            $ref: "#/definitions/LoginResponse"
+          examples:
+            application/json:
+              token: "example-token"
+              message: "Successfully logged in"
+              status: "success"
+
+  /customers:
+    get:
+      tags:
+        - Customer
+      summary: "Retrieve a list of customer objects"
+      description: "Endpoint to retrieve all customers, requires token authentication"
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: "Successfully retrieved all customers"
+          schema:
+            $ref: "#/definitions/GetCustomersResponse"
+    post:
+      tags:
+        - Customer
+      summary: "Create a new customer"
+      description: "This endpoint allows creating a new customer by providing the necessary details."
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "Customer details"
+          required: true
+          schema:
+            $ref: "#/definitions/CreateCustomerPayload"
+      responses:
+        201:
+          description: "Customer created successfully"
+          schema:
+            type: "object"
+            properties:
+              id:
+                type: "integer"
+                description: "The ID of the newly created customer"
+              name:
+                type: "string"
+                description: "Customer's name"
+              email:
+                type: "string"
+                description: "Customer's email"
+              phone:
+                type: "string"
+                description: "Customer's phone number"
+              username:
+                type: "string"
+                description: "Customer's username"
+              message:
+                type: "string"
+                description: "Success message"
+        400:
+          description: "Validation error"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Error message explaining the validation failure"
+
+  /products:
+    post:
+      tags:
+        - Product
+      summary: "Create a new product"
+      description: "This endpoint allows creating a new product by providing the necessary details."
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "Product details"
+          required: true
+          schema:
+            $ref: "#/definitions/CreateProductPayload"
+      responses:
+        201:
+          description: "Product created successfully"
+          schema:
+            type: "object"
+            properties:
+              product_name:
+                type: "string"
+                description: "The name of the newly created product"
+              price:
+                type: "number"
+                format: "float"
+                description: "The price of the product"
+              message:
+                type: "string"
+                description: "Success message"
+        400:
+          description: "Validation error"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Error message explaining the validation failure"
+    get:
+      tags:
+        - Product
+      summary: "Retrieve a list of product objects"
+      description: "Endpoint to retrieve all products, with optional pagination."
+      parameters:
+        - name: "page"
+          in: "query"
+          type: "integer"
+          description: "The page number to retrieve"
+        - name: "per_page"
+          in: "query"
+          type: "integer"
+          description: "The number of products per page"
+      responses:
+        200:
+          description: "Successfully retrieved all products"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Product"
+        400:
+          description: "Bad Request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Error message explaining the failure"
+
+  /orders:
+    post:
+      tags:
+        - Order
+      summary: "Create a new order"
+      description: "This endpoint creates a new order based on the cart."
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "Cart details to generate order"
+          required: true
+          schema:
+            $ref: "#/definitions/CreateOrderPayload"
+      responses:
+        201:
+          description: "Order created successfully"
+          schema:
+            type: "object"
+            properties:
+              order_id:
+                type: "integer"
+                description: "The ID of the newly created order"
+              customer_id:
+                type: "integer"
+                description: "The ID of the customer who placed the order"
+              date:
+                type: "string"
+                format: "date"
+                description: "The date when the order was placed"
+              message:
+                type: "string"
+                description: "Success message"
+        400:
+          description: "Validation error or no cart found"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Error message explaining the validation failure or missing cart"
+    get:
+      tags:
+        - Order
+      summary: "Retrieve a list of orders"
+      description: "Endpoint to retrieve all orders, with optional pagination."
+      parameters:
+        - name: "page"
+          in: "query"
+          type: "integer"
+          description: "The page number to retrieve"
+        - name: "per_page"
+          in: "query"
+          type: "integer"
+          description: "The number of orders per page"
+      responses:
+        200:
+          description: "Successfully retrieved all orders"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Order"
+        400:
+          description: "Bad Request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Error message explaining the failure"
+
+  /carts:
+    post:
+      tags:
+        - Cart
+      summary: "Create a new cart"
+      description: "This endpoint creates a new cart for a customer and adds products."
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "Cart details including customer ID and product IDs"
+          required: true
+          schema:
+            $ref: "#/definitions/CreateCartPayload"
+      responses:
+        201:
+          description: "Cart created successfully"
+          schema:
+            type: "object"
+            properties:
+              id:
+                type: "integer"
+                description: "The ID of the newly created cart"
+              customer_id:
+                type: "integer"
+                description: "The ID of the customer who owns the cart"
+              date:
+                type: "string"
+                format: "date"
+                description: "The date when the cart was created"
+              products:
+                type: "array"
+                items:
+                  type: "string"
+                  description: "The products in the cart"
+              message:
+                type: "string"
+                description: "Success message"
+        400:
+          description: "Validation error"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Error message explaining the validation failure"
+    get:
+      tags:
+        - Cart
+      summary: "Retrieve a list of carts"
+      description: "Endpoint to retrieve all carts, with optional pagination."
+      parameters:
+        - name: "page"
+          in: "query"
+          type: "integer"
+          description: "The page number to retrieve"
+        - name: "per_page"
+          in: "query"
+          type: "integer"
+          description: "The number of carts per page"
+      responses:
+        200:
+          description: "Successfully retrieved all carts"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Cart"
+        400:
+          description: "Bad Request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Error message explaining the failure"
+
+  /carts/{cart_id}:
+    get:
+      tags:
+        - Cart
+      summary: "Find a cart by ID"
+      description: "This endpoint retrieves a cart by its ID."
+      parameters:
+        - name: "cart_id"
+          in: "path"
+          required: true
+          type: "integer"
+          description: "ID of the cart to retrieve"
+      responses:
+        200:
+          description: "Cart retrieved successfully"
+          schema:
+            $ref: "#/definitions/Cart"
+        404:
+          description: "Cart not found"
+          schema:
+            type: "object"
+            properties:
+              message:
+                type: "string"
+                description: "Error message"
+    put:
+      tags:
+        - Cart
+      summary: "Update a cart by ID"
+      description: "This endpoint updates a cart's details."
+      parameters:
+        - name: "cart_id"
+          in: "path"
+          required: true
+          type: "integer"
+          description: "ID of the cart to update"
+        - in: "body"
+          name: "body"
+          description: "Updated cart details"
+          required: true
+          schema:
+            $ref: "#/definitions/UpdateCartPayload"
+      responses:
+        200:
+          description: "Cart updated successfully"
+          schema:
+            $ref: "#/definitions/Cart"
+        404:
+          description: "Cart not found"
+          schema:
+            type: "object"
+            properties:
+              message:
+                type: "string"
+                description: "Error message"
+    delete:
+      tags:
+        - Cart
+      summary: "Delete a cart by ID"
+      description: "This endpoint deletes a cart by its ID."
+      parameters:
+        - name: "cart_id"
+          in: "path"
+          required: true
+          type: "integer"
+          description: "ID of the cart to delete"
+      responses:
+        200:
+          description: "Cart deleted successfully"
+          schema:
+            type: "object"
+            properties:
+              message:
+                type: "string"
+                description: "Success message"
+        404:
+          description: "Cart not found"
+          schema:
+            type: "object"
+            properties:
+              message:
+                type: "string"
+                description: "Error message"
+
+# Definitions
+definitions:
+  LoginPayload:
+    type: "object"
+    properties:
+      email:
+        type: "string"
+        description: "User's email"
+      password:
+        type: "string"
+        description: "User's password"
+    required:
+      - email
+      - password
+
+  LoginResponse:
+    type: "object"
+    properties:
+      token:
+        type: "string"
+        description: "Authentication token on successful login"
+      message:
+        type: "string"
+        description: "Message indicating success or failure"
+      status:
+        type: "string"
+        description: "Status of the operation"
+    required:
+      - message
+      - status
+
+  GetCustomersResponse:
+    type: "object"
+    properties:
+      name:
+        type: "string"
+        description: "Customer's name"
+      phone:
+        type: "string"
+        description: "Customer's phone"
+      email:
+        type: "string"
+        description: "Customer's email"
+      username:
+        type: "string"
+        description: "Customer's username"
+      admin:
+        type: "integer"
+        description: "Admin permission"
+
+  CreateCustomerPayload:
+    type: "object"
+    properties:
+      name:
+        type: "string"
+        description: "Customer's full name"
+      email:
+        type: "string"
+        description: "Customer's email address"
+      phone:
+        type: "string"
+        description: "Customer's phone number"
+      username:
+        type: "string"
+        description: "Customer's username"
+      password:
+        type: "string"
+        description: "Customer's password"
+    required:
+      - name
+      - email
+      - phone
+      - username
+      - password
+
+  Product:
+    type: "object"
+    properties:
+      product_name:
+        type: "string"
+        description: "The name of the product"
+      price:
+        type: "number"
+        format: "float"
+        description: "The price of the product"
+
+  CreateProductPayload:
+    type: "object"
+    properties:
+      product_name:
+        type: "string"
+        description: "The name of the product"
+      price:
+        type: "number"
+        format: "float"
+        description: "The price of the product"
+    required:
+      - product_name
+      - price
+
+  Order:
+    type: "object"
+    properties:
+      id:
+        type: "integer"
+        description: "The ID of the order"
+      customer_id:
+        type: "integer"
+        description: "The ID of the customer who placed the order"
+      date:
+        type: "string"
+        format: "date"
+        description: "The date when the order was placed"
+
+  CreateOrderPayload:
+    type: "object"
+    properties:
+      cart_id:
+        type: "integer"
+        description: "The ID of the cart used to generate the order"
+    required:
+      - cart_id
+
+  Cart:
+    type: "object"
+    properties:
+      id:
+        type: "integer"
+        description: "The ID of the cart"
+      customer_id:
+        type: "integer"
+        description: "The ID of the customer who owns the cart"
+      date:
+        type: "string"
+        format: "date"
+        description: "The date when the cart was created"
+      products:
+        type: "array"
+        items:
+          type: "string"
+          description: "The products in the cart"
+
+  CreateCartPayload:
+    type: "object"
+    properties:
+      customer_id:
+        type: "integer"
+        description: "The ID of the customer who owns the cart"
+      product_ids:
+        type: "array"
+        items:
+          type: "integer"
+          description: "The IDs of the products to add to the cart"
+    required:
+      - customer_id
+      - product_ids
+
+  UpdateCartPayload:
+    type: "object"
+    properties:
+      date:
+        type: "string"
+        format: "date"
+        description: "The date of the cart"
+      product_ids:
+        type: "array"
+        items:
+          type: "integer"
+          description: "The IDs of the products in the cart"

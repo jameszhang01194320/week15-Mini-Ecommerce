@@ -1,0 +1,99 @@
+controllers/customer_controller.py（控制器）、services/customer_service.py（服务）以及路由模块（如routes/customer_routes.py）如下:
+
+
+from flask import request, jsonify
+from models.schemas.customerSchema import customer_schema, customers_schema, customer_login
+from services import customerService
+from marshmallow import ValidationError
+from cache import cache
+from utils.util import token_required
+
+
+
+def save(): #name the controller the same as the service it recruites
+
+    try:
+        customer_data = customer_schema.load(request.json)
+    
+    except ValidationError as e:
+        return jsonify(e.messages), 400 #return error message with a 400 failed response
+    
+    customer = customerService.save(customer_data)
+    return customer_schema.jsonify(customer), 201 #send them the customer object with a 201 successful creation status
+
+
+@cache.cached(timeout=120)
+@token_required
+def find_all():
+    page = request.args.get("page")
+    per_page = request.args.get("per_page") #paginate relys on integers and query parameters by default are strings (must convert)
+    page = 1 if not page else page
+    per_page = 10 if not per_page else per_page
+    all_customers = customerService.find_all(page, per_page)
+
+    return customers_schema.jsonify(all_customers), 200
+
+def login():
+    try: 
+        credentials = customer_login.load(request.json)
+    except ValidationError as e:
+        return jsonify(e.messages), 400 #invalid credential payload
+    
+    token = customerService.login(credentials)
+
+    if token:
+        response = {
+            "status": "success",
+            "message": "successfully logged in",
+            "token": token
+        }
+        return jsonify(response), 200
+    else:
+        return jsonify({"status": "error", "message": "invalid username or password"}), 404
+
+from database import db #services interact directly with the db
+from models.customer import Customer #need this to create customer objects
+from sqlalchemy import select #so we can query our db
+from utils.util import encode_token 
+
+
+def save(customer_data):
+
+    new_customer = Customer(name=customer_data['name'], email=customer_data['email'], phone=customer_data['phone'], username=customer_data['username'], password=customer_data['password'])
+    db.session.add(new_customer)
+    db.session.commit() #adding our new customer to our db
+    print("Commited new product to our db")
+    db.session.refresh(new_customer)
+    return new_customer
+
+
+def find_all(page=1, per_page=10):
+    query = select(Customer)
+    all_customers = db.paginate(query, page=int(page), per_page=int(per_page)) #our paginated query is dependant on a page number and how many we wish to show per page
+
+    return all_customers
+
+def login(credentials):
+    query = select(Customer).where(Customer.email == credentials['email'])
+    customer = db.session.execute(query).scalar_one_or_none()
+
+    if customer and customer.password == credentials['password']: #if there is a customer, check their password
+        auth_token = encode_token(customer.id)
+        return auth_token
+    
+    return None
+
+from flask import Blueprint
+from controllers.customerController import save, find_all, login
+
+
+customer_blueprint = Blueprint('customer_bp', __name__)
+
+#url_prefix for this blueprint is /customers
+
+customer_blueprint.route('/', methods=['POST'])(save) #triggers the save function on POST request to /customers
+customer_blueprint.route('/', methods=['GET'])(find_all)
+customer_blueprint.route('/login', methods=["POST"])(login)
+
+
+请在上面swagger.py里增加save()端点
